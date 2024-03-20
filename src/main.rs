@@ -135,9 +135,26 @@ impl Render {
         if token != self.authentication {
             return Err(anyhow!("invalid token in request"));
         }
-        let file_name = req
-            .param::<String>("name")
-            .ok_or(anyhow!("repository name is none"))?;
+        let Some(file_name) = req.param::<String>("name") else {
+			//println!("aaaaaa");
+            let mut root_path = tokio::fs::read_dir("./dev_logs").await?;
+            let mut list = Vec::new();
+			while let Some(entry) = root_path.next_entry().await?{
+				  if let Some(name) = entry.file_name().to_str(){
+					list.push(name.to_owned());
+				  }
+			}
+			let list = list.iter().filter(|v|v.contains(".json")).map(|v|v.strip_suffix(".json")).collect::<Vec<_>>();
+            let tera = Tera::new("templates/**/*.html")?;
+            let context = Context::from_value(serde_json::json!({
+                "list": list,
+				"token":token
+            }))?;
+            let result = tera.render("list.html", &context)?;
+            res.render(Text::Html(result));
+            return Ok(());
+        };
+        //println!("file_name == {}", file_name);
         let path = std::path::Path::new("./dev_logs").join(format!("{file_name}.json"));
         let mut file = tokio::fs::File::open(path).await?;
         let mut content = String::new();
@@ -170,6 +187,9 @@ async fn main() -> anyhow::Result<()> {
     });
     let root_router = Router::new()
         .push(router)
+		.push(Router::with_path("render").get(Render {
+            authentication: authentication.combine(),
+        }))
         .push(Router::with_path("render/<name>").get(Render {
             authentication: authentication.combine(),
         }));
