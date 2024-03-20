@@ -1,0 +1,5 @@
+listen = "[::]:8088"
+
+[authentication]
+secret = "123456"
+header = "token"
