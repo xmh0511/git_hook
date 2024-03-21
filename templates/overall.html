@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/public/css/layui.css" media="all">
+	<script src="/public/layui.js"></script>
+	<title>开发日志总览</title>
+</head>
+
+<body>
+	<div style="display: flex;">
+		<div style="flex: 1;">
+			{% if data %}
+			 <h2>{{data.date}}</h2>
+			 <div style="margin-bottom: 10px;padding-left: 8px;">
+				{% for item in data.list %}
+				<h3 style="margin:5px 0px 5px 0px;">{{item.name}}</h3>
+				<ul style="padding-left: 8px;">
+					{% for item2 in item.list %}
+					<li>{{item2.comment}}</li>
+					{% endfor %}
+				</ul>
+				{% endfor %}
+			 </div>
+			{% endif %}
+		</div>
+		<div>
+			<div id="calendar"></div>
+			<form action="/overall?token={{token}}" method="post" id="my_form">
+				<input id="date" type="text" name="date" style="display: none;"/>
+				<!-- <button class="layui-btn layui-btn-normal">检索</button> -->
+			</form>
+		</div>
+	</div>
+</body>
+<script>
+	let old_value = null;
+	layui.use('laydate', function () {
+		var laydate = layui.laydate;
+
+		//执行一个laydate实例
+		laydate.render({
+			elem: '#calendar', //指定元素
+			position: 'static',
+			format: "yyyy-MM-dd",
+			done: function (value, date, endDate) {
+				if(value === ""){
+					return;
+				}
+				if(old_value == value){
+					return;
+				}
+				old_value = value;
+				console.log(value); //得到日期生成的值，如：2017-08-18
+				document.getElementById("date").value = value;
+				document.getElementById("my_form").submit();
+			}
+		});
+	});
+</script>
+
+</html>
