@@ -1,0 +1,6 @@
+{% macro header(token) %}
+    <div style="display: flex;padding-left: 10px;margin-bottom: 10px;">
+		<div style="margin-right: 10px;"><a href="/render?token={{token}}">日志列表</a></div>
+		<div><a href="/overall?token={{token}}">总览</a></div>
+	</div>
+{% endmacro header %}

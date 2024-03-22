@@ -1,6 +1,5 @@
-use chrono::Utc;
+use chrono::{Local, Utc};
 use config_file::FromConfigFile;
-use salvo::http::Method;
 use salvo::prelude::*;
 use salvo::rate_limiter::{BasicQuota, FixedGuard, MokaStore, RateLimiter, RemoteIpIssuer};
 use salvo::serve_static::StaticDir;
@@ -265,7 +264,8 @@ impl Render {
             serde_json::from_str::<Value>(&content).map_err(|e| html_err!(400, e.to_string()))?;
         let tera = Tera::new("templates/**/*.html").map_err(|e| html_err!(400, e.to_string()))?;
         let context = Context::from_value(serde_json::json!({
-            "log_data": json_val
+            "log_data": json_val,
+            "token":token
         }))
         .map_err(|e| html_err!(400, e.to_string()))?;
         let result = tera
@@ -289,27 +289,17 @@ impl Overall {
             return Err(html_err!(400, "invalid token in request"));
         }
         let tera = Tera::new("templates/**/*.html").map_err(|e| html_err!(400, e.to_string()))?;
-        if req.method() == Method::GET {
-            let r = tera
-                .render(
-                    "overall.html",
-                    &Context::from_value(serde_json::json!({"token":token}))
-                        .map_err(|e| html_err!(400, e.to_string()))?,
-                )
-                .map_err(|e| html_err!(400, e.to_string()))?;
-            res.render(Text::Html(r));
-            return Ok(());
-        }
-        let date = req
-            .form::<String>("date")
-            .await
-            .ok_or(html_err!(400, "invalid date in request"))?;
-        //println!("{date}");
-        let normalized_date = chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d")
-            .map_err(|e| html_err!(400, e.to_string()))?
-            .and_hms_opt(0, 0, 0)
-            .ok_or(html_err!(400, "invalid date in request"))?;
-        let normalized_date_timestamp = normalized_date.and_utc().timestamp();
+        let date = req.form::<String>("date").await;
+        let date = if let Some(date) = date {
+            chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d")
+                .map_err(|e| html_err!(400, e.to_string()))?
+                .and_hms_opt(0, 0, 0)
+                .ok_or(html_err!(400, "invalid date in request"))?
+        } else {
+            Local::now().naive_local()
+        };
+        let date_str = date.format("%Y-%m-%d").to_string();
+        let normalized_date_timestamp = date.and_utc().timestamp();
         //println!("normalized_date_timestamp = {normalized_date_timestamp}");
         let mut root_path = tokio::fs::read_dir("./dev_logs")
             .await
@@ -330,7 +320,7 @@ impl Overall {
                                             if let Ok(data_json) =
                                                 serde_json::from_str::<Value>(&content)
                                             {
-                                                if let Some(v) = data_json.get(&date) {
+                                                if let Some(v) = data_json.get(&date_str) {
                                                     list.push(serde_json::json!({
                                                         "name":name.strip_suffix(".json"),
                                                         "list":v
@@ -351,7 +341,7 @@ impl Overall {
             .render(
                 "overall.html",
                 &Context::from_value(
-                    serde_json::json!({"token":token,"data":{"date":date,"list":list}}),
+                    serde_json::json!({"token":token,"data":{"date":date_str,"list":list}}),
                 )
                 .map_err(|e| html_err!(400, e.to_string()))?,
             )
@@ -386,17 +376,21 @@ async fn main() -> anyhow::Result<()> {
         FixedGuard::new(),
         MokaStore::new(),
         RemoteIpIssuer,
-        BasicQuota::set_seconds(1,5),
+        BasicQuota::set_seconds(1, 3),
     );
 
     let root_router = Router::new()
         .push(router)
-        .push(Router::with_path("overall").get(Overall {
-            authentication: authentication.combine(),
-        }))
-        .push(Router::with_path("overall").hoop(limiter).post(Overall {
-            authentication: authentication.combine(),
-        }))
+        .push(
+            Router::with_path("overall")
+                .hoop(limiter)
+                .get(Overall {
+                    authentication: authentication.combine(),
+                })
+                .post(Overall {
+                    authentication: authentication.combine(),
+                }),
+        )
         .push(Router::with_path("render").get(Render {
             authentication: authentication.combine(),
         }))

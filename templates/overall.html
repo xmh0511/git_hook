@@ -1,3 +1,4 @@
+{% import "header.html" as macros %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -14,8 +15,9 @@
 	}
 </style>
 <body>
+	{{ macros::header(token = token) }}
 	<div style="display: flex;">
-		<div style="flex: 1;padding-left: 10px;">
+		<div style="flex: 1;padding-left: 15px;">
 			{% if data %}
 			 <h2>{{data.date}}</h2>
 			 <div style="margin-bottom: 10px;padding-left: 8px;">
