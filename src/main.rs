@@ -332,7 +332,7 @@ impl Overall {
                                             {
                                                 if let Some(v) = data_json.get(&date) {
                                                     list.push(serde_json::json!({
-                                                        "name":name,
+                                                        "name":name.strip_suffix(".json"),
                                                         "list":v
                                                     }));
                                                 }

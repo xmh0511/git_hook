@@ -8,7 +8,11 @@
 	<script src="/public/layui.js"></script>
 	<title>开发日志总览</title>
 </head>
-
+<style>
+	li{
+		list-style: decimal;
+	}
+</style>
 <body>
 	<div style="display: flex;">
 		<div style="flex: 1;">
@@ -17,7 +21,7 @@
 			 <div style="margin-bottom: 10px;padding-left: 8px;">
 				{% for item in data.list %}
 				<h3 style="margin:5px 0px 5px 0px;">{{item.name}}</h3>
-				<ul style="padding-left: 8px;">
+				<ul style="padding-left: 30px;">
 					{% for item2 in item.list %}
 					<li>{{item2.comment}}</li>
 					{% endfor %}
