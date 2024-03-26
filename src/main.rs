@@ -296,7 +296,11 @@ impl Overall {
                 .and_hms_opt(0, 0, 0)
                 .ok_or(html_err!(400, "invalid date in request"))?
         } else {
-            Local::now().naive_local()
+            Local::now()
+                .naive_local()
+                .date()
+                .and_hms_opt(0, 0, 0)
+                .ok_or(html_err!(400, "invalid date in request"))?
         };
         let date_str = date.format("%Y-%m-%d").to_string();
         let normalized_date_timestamp = date.and_utc().timestamp();
